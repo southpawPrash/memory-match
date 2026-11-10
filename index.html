@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="description" content="A colourful matching game for children.">
+  <title>Memory Match</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./icon-192.png">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #24324a;
+      --blue: #3478df;
+      --blue-dark: #235fbd;
+      --green: #dcfce7;
+      --green-border: #22a568;
+      --page: #eef4ff;
+      --gap: clamp(5px, 1.1vh, 12px);
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; }
+    body {
+      overflow: hidden;
+      background: var(--page);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    button, select { font: inherit; }
+    .app {
+      height: 100vh;
+      height: 100dvh;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: clamp(5px, 1vh, 10px);
+      padding:
+        max(8px, env(safe-area-inset-top))
+        max(10px, env(safe-area-inset-right))
+        max(8px, env(safe-area-inset-bottom))
+        max(10px, env(safe-area-inset-left));
+    }
+    .topbar {
+      flex: 0 0 auto;
+      display: grid;
+      grid-template-columns: minmax(130px, 1fr) auto minmax(130px, 1fr);
+      align-items: center;
+      gap: 10px;
+    }
+    .brand { text-align: left; min-width: 0; }
+    h1 {
+      margin: 0;
+      font-size: clamp(19px, 3.2vh, 30px);
+      line-height: 1.05;
+      color: #244d91;
+    }
+    .subtitle {
+      margin: 3px 0 0;
+      font-size: clamp(11px, 1.7vh, 15px);
+      color: #64748b;
+    }
+    .settings {
+      display: flex;
+      justify-content: center;
+      align-items: end;
+      gap: 8px;
+    }
+    .setting { display: grid; gap: 3px; text-align: left; }
+    .setting label {
+      font-size: clamp(10px, 1.5vh, 13px);
+      color: #52627b;
+      font-weight: 650;
+    }
+    select {
+      min-width: 120px;
+      max-width: 175px;
+      padding: 7px 9px;
+      border: 1px solid #cbd5e1;
+      border-radius: 9px;
+      background: white;
+      color: var(--ink);
+      font-size: clamp(12px, 1.8vh, 15px);
+    }
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 7px;
+    }
+    .btn {
+      border: 0;
+      border-radius: 10px;
+      padding: 9px 15px;
+      color: white;
+      background: var(--blue);
+      font-weight: 700;
+      font-size: clamp(12px, 1.8vh, 15px);
+      white-space: nowrap;
+      min-height: 38px;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn.secondary { background: #64748b; }
+    .btn.install { background: #16845b; display: none; }
+    .btn:disabled { opacity: .55; }
+    .stats {
+      flex: 0 0 auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: clamp(12px, 3vw, 35px);
+      padding: 5px 10px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.78);
+      font-size: clamp(12px, 1.9vh, 16px);
+    }
+    .stat { white-space: nowrap; }
+    .stat strong { color: #245fbd; font-variant-numeric: tabular-nums; }
+    .sound-control {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: clamp(11px, 1.7vh, 14px);
+      white-space: nowrap;
+    }
+    .sound-control input { width: 17px; height: 17px; accent-color: var(--blue); }
+    .board-wrap {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+    }
+    .game-grid {
+      width: min(100%, 1150px);
+      height: 100%;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr));
+      grid-template-rows: repeat(var(--rows, 4), minmax(0, 1fr));
+      gap: var(--gap);
+    }
+    .card {
+      min-width: 0;
+      min-height: 0;
+      border: 2px solid #2d70ce;
+      border-radius: clamp(8px, 1.5vh, 16px);
+      background: linear-gradient(145deg, #76b5ff, #4388e7);
+      box-shadow: 0 3px 7px rgba(35, 75, 130, .16);
+      color: white;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      font-size: clamp(24px, min(6vh, 5.5vw), 62px);
+      line-height: 1;
+      touch-action: manipulation;
+      transition: background .12s ease, transform .12s ease;
+    }
+    .card:active:not(:disabled) { transform: scale(.96); }
+    .card.flipped {
+      background: white;
+      border-color: #75a9eb;
+      color: initial;
+    }
+    .card.matched {
+      background: var(--green);
+      border-color: var(--green-border);
+      box-shadow: 0 2px 6px rgba(34,165,104,.15);
+    }
+    .card:disabled { cursor: default; opacity: 1; }
+    .card:focus-visible, .btn:focus-visible, select:focus-visible {
+      outline: 3px solid #f59e0b;
+      outline-offset: 2px;
+    }
+    .footer {
+      flex: 0 0 auto;
+      min-height: 22px;
+      text-align: center;
+      color: #16804e;
+      font-weight: 750;
+      font-size: clamp(13px, 2.1vh, 19px);
+      line-height: 1.15;
+    }
+    .hint { color: #64748b; font-weight: 500; }
+    @media (orientation: portrait) {
+      .app { gap: 8px; padding: 10px; }
+      .topbar {
+        grid-template-columns: 1fr auto;
+        grid-template-areas: "brand actions" "settings settings";
+        gap: 8px;
+      }
+      .brand { grid-area: brand; }
+      .settings { grid-area: settings; justify-content: flex-start; }
+      .actions { grid-area: actions; }
+      .settings select { min-width: 0; width: min(42vw, 180px); }
+      .stats { gap: 10px 18px; }
+      .game-grid { width: 100%; }
+      .card { font-size: clamp(22px, min(5vh, 7vw), 48px); }
+    }
+    @media (max-height: 480px) and (orientation: landscape) {
+      .app { gap: 4px; padding: 5px 9px; }
+      .topbar { gap: 6px; }
+      .subtitle, .setting label { display: none; }
+      .btn { min-height: 32px; padding: 6px 11px; }
+      select { padding: 5px 7px; }
+      .stats { padding: 3px 8px; }
+      .footer { min-height: 17px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <h1>Memory Match!</h1>
+        <p class="subtitle">Find all the matching pairs</p>
+      </div>
+
+      <div class="settings">
+        <div class="setting">
+          <label for="difficulty">Cards</label>
+          <select id="difficulty">
+            <option value="12">Easy · 12</option>
+            <option value="20" selected>Medium · 20</option>
+            <option value="30">Hard · 30</option>
+          </select>
+        </div>
+        <div class="setting">
+          <label for="category">Category</label>
+          <select id="category">
+            <option value="animals">Animals</option>
+            <option value="food">Fruits &amp; Food</option>
+            <option value="vehicles">Vehicles</option>
+            <option value="nature">Nature</option>
+            <option value="objects">Everyday Objects</option>
+          </select>
+        </div>
+        <label class="sound-control">
+          <input type="checkbox" id="soundToggle" checked>
+          Sound
+        </label>
+      </div>
+
+      <div class="actions">
+        <button class="btn install" id="installBtn" type="button">Install</button>
+        <button class="btn" id="startBtn" type="button">Start</button>
+        <button class="btn secondary" id="resetBtn" type="button">Reset</button>
+      </div>
+    </header>
+
+    <section class="stats" aria-label="Game statistics">
+      <span class="stat">Time <strong id="timer">00:00</strong></span>
+      <span class="stat">Moves <strong id="moves">0</strong></span>
+      <span class="stat">Pairs <strong id="pairs">0 / 10</strong></span>
+      <span class="stat">Best <strong id="bestTime">--:--</strong></span>
+      <span class="stat">Best moves <strong id="bestMoves">--</strong></span>
+    </section>
+
+    <section class="board-wrap" aria-label="Memory game board">
+      <div class="game-grid" id="gameGrid"></div>
+    </section>
+
+    <div class="footer" id="message" aria-live="polite">
+      <span class="hint">Choose a category and press Start.</span>
+    </div>
+  </main>
+
+<script>
+"use strict";
+
+// Game content
+const emojiCategories = {
+  animals: ["🐶","🐱","🐵","🦁","🐯","🐸","🐼","🐰","🐻","🐷","🐮","🐔","🐧","🦊","🐢"],
+  food: ["🍎","🍌","🍇","🍓","🍊","🍉","🍍","🥝","🍒","🥕","🍕","🍔","🍩","🍦","🧁"],
+  vehicles: ["🚗","🚌","🚕","🚓","🚑","🚒","🚜","🚲","🏍️","🚂","🚁","✈️","🚀","🚢","🚐"],
+  nature: ["🌞","🌙","⭐","🌈","☁️","🌳","🌻","🌹","🌵","🍀","🌊","🔥","❄️","🌺","🌴"],
+  objects: ["⚽","🎈","🎁","🎸","⌚","📚","✏️","🚲","🎨","🎹","🧸","🪁","🪀","🔔","💡"]
+};
+
+const $ = id => document.getElementById(id);
+const gameGrid = $("gameGrid");
+const timerElement = $("timer");
+const movesElement = $("moves");
+const pairsElement = $("pairs");
+const bestTimeElement = $("bestTime");
+const bestMovesElement = $("bestMoves");
+const difficultySelect = $("difficulty");
+const categorySelect = $("category");
+const soundToggle = $("soundToggle");
+const startBtn = $("startBtn");
+const resetBtn = $("resetBtn");
+const installBtn = $("installBtn");
+const messageElement = $("message");
+
+let cards = [];
+let firstCard = null;
+let secondCard = null;
+let matchedPairs = 0;
+let moves = 0;
+let gameStarted = false;
+let startTime = 0;
+let timerInterval = null;
+let elapsedSeconds = 0;
+let audioContext = null;
+let deferredInstallPrompt = null;
+
+const layouts = {
+  12: { cols: 4, rows: 3 },
+  20: { cols: 5, rows: 4 },
+  30: { cols: 6, rows: 5 }
+};
+
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+function formatTime(seconds) {
+  return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function bestScoreKey() {
+  return `memoryGame_v2_${difficultySelect.value}_${categorySelect.value}`;
+}
+
+function getBestScore() {
+  try {
+    return JSON.parse(localStorage.getItem(bestScoreKey()));
+  } catch {
+    return null;
+  }
+}
+
+function updateBestDisplay() {
+  const best = getBestScore();
+  bestTimeElement.textContent = best ? formatTime(best.time) : "--:--";
+  bestMovesElement.textContent = best ? best.moves : "--";
+}
+
+function saveBestScore() {
+  const current = { time: elapsedSeconds, moves };
+  const best = getBestScore();
+  const isBetter = !best ||
+    current.time < best.time ||
+    (current.time === best.time && current.moves < best.moves);
+
+  if (isBetter) {
+    try {
+      localStorage.setItem(bestScoreKey(), JSON.stringify(current));
+    } catch (error) {
+      console.warn("Could not save best score:", error);
+    }
+  }
+  updateBestDisplay();
+}
+
+// Small synthesised sound effects; no audio files are required.
+function playSound(type) {
+  if (!soundToggle.checked) return;
+
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    if (!audioContext) audioContext = new AudioContextClass();
+
+    const play = () => {
+      if (type === "complete") {
+        // Bright, short victory melody in a major key.
+        const melody = [
+          [523.25, 0.15], [659.25, 0.15], [783.99, 0.15],
+          [1046.50, 0.28], [783.99, 0.14], [1046.50, 0.42]
+        ];
+        let at = audioContext.currentTime;
+        melody.forEach(([frequency, duration]) => {
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(frequency, at);
+          gain.gain.setValueAtTime(0.001, at);
+          gain.gain.linearRampToValueAtTime(0.14, at + 0.018);
+          gain.gain.setValueAtTime(0.14, at + duration - 0.025);
+          gain.gain.linearRampToValueAtTime(0.001, at + duration);
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          osc.start(at);
+          osc.stop(at + duration + 0.01);
+          at += duration + 0.045;
+        });
+        return;
+      }
+
+      const notes = {
+        flip: [520],
+        match: [659, 880],
+        mismatch: [260]
+      }[type] || [];
+
+      notes.forEach((frequency, index) => {
+        const at = audioContext.currentTime + index * 0.11;
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(frequency, at);
+        gain.gain.setValueAtTime(0.10, at);
+        gain.gain.exponentialRampToValueAtTime(0.001, at + 0.17);
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.start(at);
+        osc.stop(at + 0.18);
+      });
+    };
+
+    if (audioContext.state === "suspended") {
+      audioContext.resume().then(play).catch(() => {});
+    } else {
+      play();
+    }
+  } catch (error) {
+    console.warn("Sound unavailable:", error);
+  }
+}
+
+function createBoard() {
+  gameGrid.innerHTML = "";
+  const totalCards = Number(difficultySelect.value);
+  const { cols, rows } = layouts[totalCards];
+  gameGrid.style.setProperty("--cols", cols);
+  gameGrid.style.setProperty("--rows", rows);
+
+  const pool = shuffle([...emojiCategories[categorySelect.value]]);
+  const selected = pool.slice(0, totalCards / 2);
+  const deck = shuffle([...selected, ...selected]);
+
+  cards = deck.map((emoji, index) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "card";
+    card.textContent = "?";
+    card.dataset.emoji = emoji;
+    card.dataset.index = index;
+    card.disabled = true;
+    card.setAttribute("aria-label", "Hidden card");
+    card.addEventListener("click", () => flipCard(card));
+    gameGrid.appendChild(card);
+    return card;
+  });
+
+  pairsElement.textContent = `0 / ${totalCards / 2}`;
+}
+
+function updateTimer() {
+  elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+  timerElement.textContent = formatTime(elapsedSeconds);
+}
+
+function startGame() {
+  if (gameStarted) return;
+
+  createBoard();
+  matchedPairs = 0;
+  moves = 0;
+  firstCard = null;
+  secondCard = null;
+  elapsedSeconds = 0;
+  gameStarted = true;
+
+  timerElement.textContent = "00:00";
+  movesElement.textContent = "0";
+  messageElement.textContent = "";
+
+  cards.forEach(card => { card.disabled = false; });
+  difficultySelect.disabled = true;
+  categorySelect.disabled = true;
+
+  startTime = Date.now();
+  timerInterval = setInterval(updateTimer, 250);
+  startBtn.disabled = true;
+  startBtn.textContent = "Playing";
+}
+
+function hideCard(card) {
+  card.textContent = "?";
+  card.classList.remove("flipped");
+  card.setAttribute("aria-label", "Hidden card");
+}
+
+function flipCard(card) {
+  if (!gameStarted || card.classList.contains("matched")) return;
+
+  // The next valid card tap clears the previous non-matching pair first.
+  // The newly tapped card is then revealed in this same interaction.
+  if (secondCard !== null) {
+    hideCard(firstCard);
+    hideCard(secondCard);
+    firstCard = null;
+    secondCard = null;
+  }
+
+  if (card === firstCard || card.classList.contains("flipped")) return;
+
+  card.textContent = card.dataset.emoji;
+  card.classList.add("flipped");
+  card.setAttribute("aria-label", card.dataset.emoji);
+  playSound("flip");
+
+  if (firstCard === null) {
+    firstCard = card;
+    return;
+  }
+
+  secondCard = card;
+  moves++;
+  movesElement.textContent = moves;
+  checkMatch();
+}
+
+function checkMatch() {
+  if (firstCard.dataset.emoji === secondCard.dataset.emoji) {
+    firstCard.classList.add("matched");
+    secondCard.classList.add("matched");
+    firstCard.disabled = true;
+    secondCard.disabled = true;
+    matchedPairs++;
+    pairsElement.textContent = `${matchedPairs} / ${cards.length / 2}`;
+    firstCard = null;
+    secondCard = null;
+    playSound("match");
+
+    if (matchedPairs === cards.length / 2) endGame();
+  } else {
+    // Keep both cards showing. The next card tap will clear them.
+    playSound("mismatch");
+  }
+}
+
+function endGame() {
+  updateTimer();
+  clearInterval(timerInterval);
+  timerInterval = null;
+  gameStarted = false;
+  cards.forEach(card => { card.disabled = true; });
+  saveBestScore();
+
+  messageElement.textContent =
+    `Well done! ${formatTime(elapsedSeconds)} · ${moves} moves`;
+
+  playSound("complete");
+  difficultySelect.disabled = false;
+  categorySelect.disabled = false;
+  startBtn.disabled = false;
+  startBtn.textContent = "Play Again";
+}
+
+function resetGame() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+  gameStarted = false;
+  firstCard = null;
+  secondCard = null;
+  matchedPairs = 0;
+  moves = 0;
+  elapsedSeconds = 0;
+  startTime = 0;
+
+  timerElement.textContent = "00:00";
+  movesElement.textContent = "0";
+  messageElement.innerHTML = '<span class="hint">Choose a category and press Start.</span>';
+
+  difficultySelect.disabled = false;
+  categorySelect.disabled = false;
+  startBtn.disabled = false;
+  startBtn.textContent = "Start";
+  updateBestDisplay();
+  createBoard();
+}
+
+startBtn.addEventListener("click", startGame);
+resetBtn.addEventListener("click", resetGame);
+difficultySelect.addEventListener("change", resetGame);
+categorySelect.addEventListener("change", resetGame);
+
+// Show a native install prompt when Chrome makes one available.
+window.addEventListener("beforeinstallprompt", event => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  installBtn.style.display = "inline-block";
+});
+
+installBtn.addEventListener("click", async () => {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  installBtn.style.display = "none";
+});
+
+window.addEventListener("appinstalled", () => {
+  installBtn.style.display = "none";
+  deferredInstallPrompt = null;
+});
+
+// Register offline support. The app still opens if service workers are unavailable.
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js").catch(error => {
+      console.warn("Offline support could not be registered:", error);
+    });
+  });
+}
+
+resetGame();
+</script>
+</body>
+</html>
