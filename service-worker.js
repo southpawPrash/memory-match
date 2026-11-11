@@ -1,4 +1,4 @@
-const CACHE_NAME = "memory-match-pwa-v1";
+const CACHE_NAME = "memory-match-pwa-v1.1";
 const APP_FILES = [
   "./",
   "./index.html",
