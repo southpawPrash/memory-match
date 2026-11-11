@@ -146,29 +146,59 @@
     .card {
       min-width: 0;
       min-height: 0;
-      border: 2px solid #2d70ce;
+      position: relative;
+      border: 0;
       border-radius: clamp(8px, 1.5vh, 16px);
-      background: linear-gradient(145deg, #76b5ff, #4388e7);
-      box-shadow: 0 3px 7px rgba(35, 75, 130, .16);
-      color: white;
-      display: grid;
-      place-items: center;
+      background: transparent;
       padding: 0;
       font-size: clamp(24px, min(6vh, 5.5vw), 62px);
       line-height: 1;
+      perspective: 900px;
       touch-action: manipulation;
-      transition: background .12s ease, transform .12s ease;
+      -webkit-tap-highlight-color: transparent;
     }
-    .card:active:not(:disabled) { transform: scale(.96); }
-    .card.flipped {
-      background: white;
+    .card-inner {
+      position: absolute;
+      inset: 0;
+      display: block;
+      border-radius: inherit;
+      transform-style: preserve-3d;
+      transition: transform 270ms cubic-bezier(.2, .75, .25, 1);
+    }
+    .card.flipped .card-inner {
+      transform: rotateY(180deg);
+    }
+    .card-face {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      border: 2px solid #2d70ce;
+      border-radius: inherit;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      overflow: hidden;
+    }
+    .card-front {
+      color: white;
+      background: linear-gradient(145deg, #76b5ff, #4388e7);
+      box-shadow: 0 3px 7px rgba(35, 75, 130, .16);
+    }
+    .card-back {
+      transform: rotateY(180deg);
+      background: #fff;
       border-color: #75a9eb;
       color: initial;
     }
-    .card.matched {
+    .card.matched .card-back {
       background: var(--green);
       border-color: var(--green-border);
       box-shadow: 0 2px 6px rgba(34,165,104,.15);
+    }
+    .card:active:not(:disabled) { filter: brightness(.97); }
+    .card:disabled { cursor: default; opacity: 1; }
+    @media (prefers-reduced-motion: reduce) {
+      .card-inner { transition-duration: 1ms; }
     }
     .card:disabled { cursor: default; opacity: 1; }
     .card:focus-visible, .btn:focus-visible, select:focus-visible {
@@ -441,7 +471,20 @@ function createBoard() {
     const card = document.createElement("button");
     card.type = "button";
     card.className = "card";
-    card.textContent = "?";
+
+    const inner = document.createElement("span");
+    inner.className = "card-inner";
+
+    const front = document.createElement("span");
+    front.className = "card-face card-front";
+    front.textContent = "?";
+
+    const back = document.createElement("span");
+    back.className = "card-face card-back";
+    back.textContent = emoji;
+
+    inner.append(front, back);
+    card.appendChild(inner);
     card.dataset.emoji = emoji;
     card.dataset.index = index;
     card.disabled = true;
@@ -485,7 +528,7 @@ function startGame() {
 }
 
 function hideCard(card) {
-  card.textContent = "?";
+  // Removing the class triggers the reverse 3D flip animation.
   card.classList.remove("flipped");
   card.setAttribute("aria-label", "Hidden card");
 }
@@ -504,7 +547,6 @@ function flipCard(card) {
 
   if (card === firstCard || card.classList.contains("flipped")) return;
 
-  card.textContent = card.dataset.emoji;
   card.classList.add("flipped");
   card.setAttribute("aria-label", card.dataset.emoji);
   playSound("flip");
