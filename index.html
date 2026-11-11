@@ -223,9 +223,23 @@
         gap: 8px;
       }
       .brand { grid-area: brand; }
-      .settings { grid-area: settings; justify-content: flex-start; }
+      .settings {
+        grid-area: settings;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+        width: 100%;
+        min-width: 0;
+        gap: 8px;
+        align-items: end;
+      }
+      .settings .setting { min-width: 0; }
       .actions { grid-area: actions; }
-      .settings select { min-width: 0; width: min(42vw, 180px); }
+      .settings select {
+        min-width: 0;
+        max-width: none;
+        width: 100%;
+      }
+      .sound-control { justify-self: end; }
       .stats { gap: 10px 18px; }
       .game-grid { width: 100%; }
       .card { font-size: clamp(22px, min(5vh, 7vw), 48px); }
